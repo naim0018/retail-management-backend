@@ -1,0 +1,17 @@
+
+> backend-template@1.0.0 dev
+> ts-node-dev --respawn --transpile-only src/server.ts
+
+[INFO] 13:50:08 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.5.4)
+MongoParseError: Invalid scheme, expected connection string to start with "mongodb://" or "mongodb+srv://"
+    at new ConnectionString (E:\RetailManagementServic\RetailManagementBackend\node_modules\mongodb-connection-string-url\src\index.ts:133:13)
+    at parseOptions (E:\RetailManagementServic\RetailManagementBackend\node_modules\mongodb\src\connection_string.ts:254:15)
+    at new MongoClient (E:\RetailManagementServic\RetailManagementBackend\node_modules\mongodb\src\mongo_client.ts:366:34)
+    at NativeConnection.createClient (E:\RetailManagementServic\RetailManagementBackend\node_modules\mongoose\lib\drivers\node-mongodb-native\connection.js:306:14)
+    at NativeConnection.openUri (E:\RetailManagementServic\RetailManagementBackend\node_modules\mongoose\lib\connection.js:823:34)
+    at Mongoose.connect (E:\RetailManagementServic\RetailManagementBackend\node_modules\mongoose\lib\mongoose.js:447:15)
+    at main (E:\RetailManagementServic\RetailManagementBackend\src\server.ts:10:19)
+    at Object.<anonymous> (E:\RetailManagementServic\RetailManagementBackend\src\server.ts:20:1)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1562:14)
+    at Module._compile (E:\RetailManagementServic\RetailManagementBackend\node_modules\source-map-support\source-map-support.js:568:25)
+^C

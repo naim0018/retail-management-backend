@@ -1,0 +1,6 @@
+
+> backend-template@1.0.0 dev
+> ts-node-dev --respawn --transpile-only src/server.ts
+
+'ts-node-dev' is not recognized as an internal or external command,
+operable program or batch file.

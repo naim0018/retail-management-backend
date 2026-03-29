@@ -1,0 +1,19 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TransactionRoutes = void 0;
+const express_1 = require("express");
+const transaction_controller_1 = require("./transaction.controller");
+const validateRequest_1 = __importDefault(require("../../app/middleware/validateRequest"));
+const transaction_validation_1 = require("./transaction.validation");
+const router = (0, express_1.Router)();
+router.post('/', (0, validateRequest_1.default)(transaction_validation_1.TransactionValidation.createTransactionValidationSchema), transaction_controller_1.TransactionControllers.createTransaction);
+router.get('/get-summary', transaction_controller_1.TransactionControllers.getOverviewSummary);
+router.post('/reset-daily', transaction_controller_1.TransactionControllers.resetDailyTransactions);
+router.post('/reset-monthly', transaction_controller_1.TransactionControllers.resetMonthlyTransactions);
+router.post('/clear-debt', transaction_controller_1.TransactionControllers.clearDebt);
+router.get('/', transaction_controller_1.TransactionControllers.getAllTransactions);
+router.get('/:id', transaction_controller_1.TransactionControllers.getTransactionById);
+exports.TransactionRoutes = router;

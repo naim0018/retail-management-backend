@@ -96,7 +96,7 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
         if (platformName) {
           await PlatformBalance.findOneAndUpdate(
             { platformName },
-            { $inc: { balance: -amount }, lastUpdated: new Date() },
+            { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
             { session, upsert: true },
           );
         }
@@ -110,7 +110,7 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
         if (platformName) {
           await PlatformBalance.findOneAndUpdate(
             { platformName },
-            { $inc: { balance: amount }, lastUpdated: new Date() },
+            { $inc: { balance: amount + profit }, lastUpdated: new Date() },
             { session, upsert: true },
           );
         }
@@ -124,7 +124,7 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
         if (platformName) {
           await PlatformBalance.findOneAndUpdate(
             { platformName },
-            { $inc: { balance: amount }, lastUpdated: new Date() },
+            { $inc: { balance: amount + profit }, lastUpdated: new Date() },
             { session, upsert: true },
           );
         }
@@ -138,7 +138,7 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
         if (platformName) {
           await PlatformBalance.findOneAndUpdate(
             { platformName },
-            { $inc: { balance: -amount }, lastUpdated: new Date() },
+            { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
             { session, upsert: true },
           );
         }

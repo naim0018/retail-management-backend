@@ -20,5 +20,11 @@ router.post('/clear-debt', TransactionControllers.clearDebt);
 router.get('/', TransactionControllers.getAllTransactions);
 
 router.get('/:id', TransactionControllers.getTransactionById);
+router.patch(
+  '/:id',
+  validateRequest(TransactionValidation.updateTransactionValidationSchema),
+  TransactionControllers.updateTransaction,
+);
+router.delete('/:id', TransactionControllers.deleteTransaction);
 
 export const TransactionRoutes = router;

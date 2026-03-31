@@ -1,45 +1,162 @@
-import mongoose from 'mongoose';
-import { TTransaction } from './transaction.interface';
-import { Transaction } from './transaction.model';
-import { PlatformBalance } from '../PlatformBalance/platformBalance.model';
+import mongoose from "mongoose";
+import { TTransaction } from "./transaction.interface";
+import { Transaction } from "./transaction.model";
+import { PlatformBalance } from "../PlatformBalance/platformBalance.model";
 
 // ─── Rate Constants ──────────────────────────────────────────────────────────
 
 const COMMISSION_RATE = 0.0041;
 const BKASH_COMMISSION_RATE = 0.00375;
 const FLEXILOAD_PROFIT_RATE = 0.027;
-const PHOTOCOPY_PROFIT_RATE = 0.5;          // 5tk per 2 copies → 2.5tk profit
-const PRINTING_PROFIT_RATE = 2 / 3;         // 10tk per 2/3 pages → 6.67tk profit
+const PHOTOCOPY_PROFIT_RATE = 0.5; // 5tk per 2 copies → 2.5tk profit
+const PRINTING_PROFIT_RATE = 2 / 3; // 10tk per 2/3 pages → 6.67tk profit
 
 // Actions that add to the Main Wallet balance
 const ADD_TO_WALLET_ACTIONS = [
-  'Photocopy',
-  'Printing',
-  'Customer Service',
-  'Inflow',
-  'Flexiload',
-  'Meter Recharge',
+  "Photocopy",
+  "Printing",
+  "Customer Service",
+  "Inflow",
+  "Meter Recharge",
 ] as const;
 
 // Actions that deduct from the Main Wallet balance
 const CUT_FROM_WALLET_ACTIONS = [
-  'Personal Expenses',
-  'Shop Expenses',
-  'Outflow',
-  'Lending Money',
-  'Debt',
+  "Personal Expenses",
+  "Shop Expenses",
+  "Outflow",
+  "Lending Money",
+  "Debt",
 ] as const;
 
 // Mobile banking types that count towards Sales
-const SALES_TYPES = ['Cash In', 'Cash Out'] as const;
+const SALES_TYPES = ["Cash In", "Cash Out"] as const;
 
 // Other-category actions that count towards Sales
 const SALES_ACTION_NAMES = [
-  'Flexiload',
-  'Photocopy',
-  'Printing',
-  'Customer Service',
+  "Flexiload",
+  "Photocopy",
+  "Printing",
+  "Customer Service",
 ] as const;
+
+// ─── Balance Adjustment Helper ───────────────────────────────────────────────
+
+const adjustPlatformBalance = async (
+  transaction: TTransaction,
+  session: mongoose.ClientSession,
+  isReverse: boolean = false,
+) => {
+  const amount = isReverse ? -transaction.amount : transaction.amount;
+  const profit = isReverse
+    ? -(transaction.profit || 0)
+    : transaction.profit || 0;
+  const actionName = transaction.actionName || "";
+  const type = transaction.type;
+  const platformName = transaction.platformName;
+
+  if (transaction.category === "mobile_banking") {
+    if (type === "Cash In") {
+      // Create: Main Wallet +amount, Platform -amount +profit
+      // Reverse: Main Wallet -amount, Platform +amount -profit
+      await PlatformBalance.findOneAndUpdate(
+        { platformName: "Main Wallet" },
+        { $inc: { balance: amount }, lastUpdated: new Date() },
+        { session, upsert: true },
+      );
+      if (platformName) {
+        await PlatformBalance.findOneAndUpdate(
+          { platformName },
+          { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+      }
+    } else if (type === "Cash Out") {
+      // Create: Main Wallet -amount, Platform +amount +profit
+      await PlatformBalance.findOneAndUpdate(
+        { platformName: "Main Wallet" },
+        { $inc: { balance: -amount }, lastUpdated: new Date() },
+        { session, upsert: true },
+      );
+      if (platformName) {
+        await PlatformBalance.findOneAndUpdate(
+          { platformName },
+          { $inc: { balance: amount + profit }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+      }
+    } else if (type === "B2B In") {
+      await PlatformBalance.findOneAndUpdate(
+        { platformName: "Main Wallet" },
+        { $inc: { balance: -amount }, lastUpdated: new Date() },
+        { session, upsert: true },
+      );
+      if (platformName) {
+        await PlatformBalance.findOneAndUpdate(
+          { platformName },
+          { $inc: { balance: amount + profit }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+      }
+    } else if (type === "B2B Out") {
+      await PlatformBalance.findOneAndUpdate(
+        { platformName: "Main Wallet" },
+        { $inc: { balance: amount }, lastUpdated: new Date() },
+        { session, upsert: true },
+      );
+      if (platformName) {
+        await PlatformBalance.findOneAndUpdate(
+          { platformName },
+          { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+      }
+    }
+  } else {
+    // Other category balance updates
+    if (actionName === "Flexiload") {
+      if (type === "Add Balance") {
+        // Cash leaves Main Wallet, Digital balance enters Flexiload
+        await PlatformBalance.findOneAndUpdate(
+          { platformName: "Main Wallet" },
+          { $inc: { balance: -amount }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+        await PlatformBalance.findOneAndUpdate(
+          { platformName: "Flexiload" },
+          { $inc: { balance: amount }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+      } else {
+        // Normal Flexiload (send): Cash enters Main Wallet, Digital balance leaves Flexiload
+        await PlatformBalance.findOneAndUpdate(
+          { platformName: "Main Wallet" },
+          { $inc: { balance: amount }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+        await PlatformBalance.findOneAndUpdate(
+          { platformName: "Flexiload" },
+          { $inc: { balance: -amount }, lastUpdated: new Date() },
+          { session, upsert: true },
+        );
+      }
+    } else if ((ADD_TO_WALLET_ACTIONS as readonly string[]).includes(actionName)) {
+      await PlatformBalance.findOneAndUpdate(
+        { platformName: "Main Wallet" },
+        { $inc: { balance: amount }, lastUpdated: new Date() },
+        { session, upsert: true },
+      );
+    } else if (
+      (CUT_FROM_WALLET_ACTIONS as readonly string[]).includes(actionName)
+    ) {
+      await PlatformBalance.findOneAndUpdate(
+        { platformName: "Main Wallet" },
+        { $inc: { balance: -amount }, lastUpdated: new Date() },
+        { session, upsert: true },
+      );
+    }
+  }
+};
 
 // ─── Create Transaction ───────────────────────────────────────────────────────
 
@@ -49,117 +166,39 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
     session.startTransaction();
 
     let profit = 0;
-    const actionName = payload.actionName || '';
+    const actionName = payload.actionName || "";
     const amount = payload.amount;
     const type = payload.type;
 
     // ── Profit Calculation ──────────────────────────────────────────────────
-    if (payload.category === 'mobile_banking') {
-      // Only Cash In / Cash Out earn commission — B2B earns nothing
-      if (type === 'Cash In' || type === 'Cash Out') {
+    if (payload.category === "mobile_banking") {
+      if (type === "Cash In" || type === "Cash Out") {
         profit =
-          actionName === 'bKash'
+          actionName === "bKash"
             ? amount * BKASH_COMMISSION_RATE
             : amount * COMMISSION_RATE;
       }
-    } else if (actionName === 'Flexiload') {
-      profit = amount * FLEXILOAD_PROFIT_RATE;
-    } else if (actionName === 'Photocopy') {
+    } else if (actionName === "Flexiload") {
+      profit = type === "Add Balance" ? 0 : amount * FLEXILOAD_PROFIT_RATE;
+    } else if (actionName === "Photocopy") {
       profit = amount * PHOTOCOPY_PROFIT_RATE;
-    } else if (actionName === 'Printing') {
+    } else if (actionName === "Printing") {
       profit = amount * PRINTING_PROFIT_RATE;
-    } else if (actionName === 'Customer Service') {
-      profit = amount; // Full amount is profit (card service)
+    } else if (actionName === "Customer Service") {
+      profit = amount;
     }
-    // Inflow, Outflow, Expenses, Debt, Lending Money → profit = 0
 
-    // ── Custom Profit Override ──────────────────────────────────────────────
-    // If the frontend explicitly provides a customProfit, it takes precedence
-    // over the backend-calculated value. This allows manual adjustments.
-    if (typeof payload.customProfit === 'number' && !isNaN(payload.customProfit)) {
+    if (
+      typeof payload.customProfit === "number" &&
+      !isNaN(payload.customProfit)
+    ) {
       profit = payload.customProfit;
     }
 
     payload.profit = profit;
 
     // ── Platform Balance Updates ────────────────────────────────────────────
-    if (payload.category === 'mobile_banking') {
-      const platformName = payload.platformName;
-
-      if (type === 'Cash In') {
-        // Customer brings cash → you load from bKash → bKash ↓, Main Wallet ↑
-        await PlatformBalance.findOneAndUpdate(
-          { platformName: 'Main Wallet' },
-          { $inc: { balance: amount }, lastUpdated: new Date() },
-          { session, upsert: true },
-        );
-        if (platformName) {
-          await PlatformBalance.findOneAndUpdate(
-            { platformName },
-            { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
-            { session, upsert: true },
-          );
-        }
-      } else if (type === 'Cash Out') {
-        // Customer wants cash → sends to your bKash → bKash ↑, Main Wallet ↓
-        await PlatformBalance.findOneAndUpdate(
-          { platformName: 'Main Wallet' },
-          { $inc: { balance: -amount }, lastUpdated: new Date() },
-          { session, upsert: true },
-        );
-        if (platformName) {
-          await PlatformBalance.findOneAndUpdate(
-            { platformName },
-            { $inc: { balance: amount + profit }, lastUpdated: new Date() },
-            { session, upsert: true },
-          );
-        }
-      } else if (type === 'B2B In') {
-        // Another agent sends to your bKash → you give cash → bKash ↑, Main Wallet ↓
-        await PlatformBalance.findOneAndUpdate(
-          { platformName: 'Main Wallet' },
-          { $inc: { balance: -amount }, lastUpdated: new Date() },
-          { session, upsert: true },
-        );
-        if (platformName) {
-          await PlatformBalance.findOneAndUpdate(
-            { platformName },
-            { $inc: { balance: amount + profit }, lastUpdated: new Date() },
-            { session, upsert: true },
-          );
-        }
-      } else if (type === 'B2B Out') {
-        // You send from bKash to another agent → they give you cash → bKash ↓, Main Wallet ↑
-        await PlatformBalance.findOneAndUpdate(
-          { platformName: 'Main Wallet' },
-          { $inc: { balance: amount }, lastUpdated: new Date() },
-          { session, upsert: true },
-        );
-        if (platformName) {
-          await PlatformBalance.findOneAndUpdate(
-            { platformName },
-            { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
-            { session, upsert: true },
-          );
-        }
-      }
-    } else {
-      // Other category balance updates
-      if ((ADD_TO_WALLET_ACTIONS as readonly string[]).includes(actionName)) {
-        await PlatformBalance.findOneAndUpdate(
-          { platformName: 'Main Wallet' },
-          { $inc: { balance: amount }, lastUpdated: new Date() },
-          { session, upsert: true },
-        );
-      } else if ((CUT_FROM_WALLET_ACTIONS as readonly string[]).includes(actionName)) {
-        await PlatformBalance.findOneAndUpdate(
-          { platformName: 'Main Wallet' },
-          { $inc: { balance: -amount }, lastUpdated: new Date() },
-          { session, upsert: true },
-        );
-      }
-      // Lending Money: no balance change (tracked for records)
-    }
+    await adjustPlatformBalance(payload, session);
 
     const result = await Transaction.create([payload], { session });
 
@@ -173,11 +212,172 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
   }
 };
 
+const updateTransactionInDB = async (
+  id: string,
+  payload: Partial<TTransaction>,
+) => {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const oldTransaction = await Transaction.findById(id).session(session);
+    if (!oldTransaction) {
+      throw new Error("Transaction not found");
+    }
+
+    // 1. Reverse old balance impact
+    await adjustPlatformBalance(oldTransaction.toObject(), session, true);
+
+    // 2. Merge payload with old transaction to calculate new profit
+    const updatedData = { ...oldTransaction.toObject(), ...payload };
+
+    let profit = 0;
+    const actionName = updatedData.actionName || "";
+    const amount = updatedData.amount;
+    const type = updatedData.type;
+
+    // Identify if customProfit is explicitly provided in this update request
+    const isCustomProfitProvided = "customProfit" in payload && payload.customProfit !== undefined;
+
+    if (updatedData.category === "mobile_banking") {
+      if (type === "Cash In" || type === "Cash Out") {
+        profit =
+          actionName === "bKash"
+            ? amount * BKASH_COMMISSION_RATE
+            : amount * COMMISSION_RATE;
+      }
+    } else if (actionName === "Flexiload") {
+      profit = type === "Add Balance" ? 0 : amount * FLEXILOAD_PROFIT_RATE;
+    } else if (actionName === "Photocopy") {
+      profit = amount * PHOTOCOPY_PROFIT_RATE;
+    } else if (actionName === "Printing") {
+      profit = amount * PRINTING_PROFIT_RATE;
+    } else if (actionName === "Customer Service") {
+      profit = amount;
+    }
+
+    // Use customProfit if explicitly provided in payload, OR if it already existed and wasn't intended to be overridden by a new amount calculation
+    if (isCustomProfitProvided) {
+      profit = payload.customProfit!;
+    } else if (
+      !("amount" in payload) && 
+      typeof oldTransaction.customProfit === "number" &&
+      !isNaN(oldTransaction.customProfit)
+    ) {
+      // If amount isn't changing and old transaction had customProfit, keep it
+      profit = oldTransaction.customProfit;
+    }
+
+    updatedData.profit = profit;
+    // If no customProfit provided in this update, ensure we're not carrying over an old one if it's supposed to be recalculated
+    if (!isCustomProfitProvided && "amount" in payload) {
+      updatedData.customProfit = undefined;
+    }
+
+    // 3. Apply new balance impact
+    await adjustPlatformBalance(updatedData, session);
+
+    // 4. Update in DB
+    const result = await Transaction.findByIdAndUpdate(id, updatedData, {
+      new: true,
+      session,
+    });
+
+    await session.commitTransaction();
+    await session.endSession();
+    return result;
+  } catch (error) {
+    await session.abortTransaction();
+    await session.endSession();
+    throw error;
+  }
+};
+
+const deleteTransactionFromDB = async (id: string) => {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const transaction = await Transaction.findById(id).session(session);
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    // Reverse balance impact
+    await adjustPlatformBalance(transaction.toObject(), session, true);
+
+    const result = await Transaction.findByIdAndDelete(id, { session });
+
+    await session.commitTransaction();
+    await session.endSession();
+    return result;
+  } catch (error) {
+    await session.abortTransaction();
+    await session.endSession();
+    throw error;
+  }
+};
+
 // ─── Read Operations ──────────────────────────────────────────────────────────
 
-const getAllTransactionsFromDB = async () => {
-  const result = await Transaction.find().sort({ createdAt: -1 });
-  return result;
+const getAllTransactionsFromDB = async (query: Record<string, any>) => {
+  const {
+    page = 1,
+    limit = 50,
+    sortBy = 'createdAt',
+    sortOrder = -1,
+    searchTerm,
+    category,
+    type,
+    status,
+    actionName,
+    startDate,
+    endDate,
+  } = query;
+
+  const mongoQuery: Record<string, any> = {};
+
+  // Filtering
+  if (category) mongoQuery.category = category;
+  if (type) mongoQuery.type = type;
+  if (status) mongoQuery.status = status;
+  if (actionName) mongoQuery.actionName = actionName;
+
+  // Date Range Filtering
+  if (startDate || endDate) {
+    mongoQuery.createdAt = {};
+    if (startDate) mongoQuery.createdAt.$gte = new Date(startDate);
+    if (endDate) mongoQuery.createdAt.$lte = new Date(endDate);
+  }
+
+  // Search by actionName or operator
+  if (searchTerm) {
+    mongoQuery.$or = [
+      { actionName: { $regex: searchTerm, $options: 'i' } },
+      { operator: { $regex: searchTerm, $options: 'i' } },
+      { referenceId: { $regex: searchTerm, $options: 'i' } },
+    ];
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const sort: Record<string, any> = { [sortBy]: Number(sortOrder) };
+
+  const result = await Transaction.find(mongoQuery)
+    .sort(sort)
+    .skip(skip)
+    .limit(Number(limit));
+
+  const total = await Transaction.countDocuments(mongoQuery);
+
+  return {
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPage: Math.ceil(total / Number(limit)),
+    },
+    data: result,
+  };
 };
 
 const getTransactionByIdFromDB = async (id: string) => {
@@ -191,8 +391,24 @@ const getOverviewSummaryFromDB = async () => {
   const now = new Date();
 
   // Today boundaries
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+  const endOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
   // Current month start
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -214,23 +430,28 @@ const getOverviewSummaryFromDB = async () => {
                       $or: [
                         {
                           $and: [
-                            { $eq: ['$category', 'mobile_banking'] },
-                            { $in: ['$type', [...SALES_TYPES]] },
+                            { $eq: ["$category", "mobile_banking"] },
+                            { $in: ["$type", [...SALES_TYPES]] },
                           ],
                         },
-                        { $in: ['$actionName', [...SALES_ACTION_NAMES]] },
+                        {
+                          $and: [
+                            { $in: ["$actionName", [...SALES_ACTION_NAMES]] },
+                            { $ne: ["$type", "Add Balance"] },
+                          ],
+                        },
                       ],
                     },
-                    '$amount',
+                    "$amount",
                     0,
                   ],
                 },
               },
-              totalNetProfit: { $sum: '$profit' },
+              totalNetProfit: { $sum: "$profit" },
               // Debt is tracked separately (not part of sales)
               totalDebt: {
                 $sum: {
-                  $cond: [{ $eq: ['$actionName', 'Debt'] }, '$amount', 0],
+                  $cond: [{ $eq: ["$actionName", "Debt"] }, "$amount", 0],
                 },
               },
             },
@@ -250,19 +471,24 @@ const getOverviewSummaryFromDB = async () => {
                       $or: [
                         {
                           $and: [
-                            { $eq: ['$category', 'mobile_banking'] },
-                            { $in: ['$type', [...SALES_TYPES]] },
+                            { $eq: ["$category", "mobile_banking"] },
+                            { $in: ["$type", [...SALES_TYPES]] },
                           ],
                         },
-                        { $in: ['$actionName', [...SALES_ACTION_NAMES]] },
+                        {
+                          $and: [
+                            { $in: ["$actionName", [...SALES_ACTION_NAMES]] },
+                            { $ne: ["$type", "Add Balance"] },
+                          ],
+                        },
                       ],
                     },
-                    '$amount',
+                    "$amount",
                     0,
                   ],
                 },
               },
-              profitToday: { $sum: '$profit' },
+              profitToday: { $sum: "$profit" },
             },
           },
         ],
@@ -271,9 +497,13 @@ const getOverviewSummaryFromDB = async () => {
   ]);
 
   const platformBalances = await PlatformBalance.find();
-  const totalBalance = platformBalances.reduce((acc, curr) => acc + curr.balance, 0);
+  const totalBalance = platformBalances.reduce(
+    (acc, curr) => acc + curr.balance,
+    0,
+  );
   const mainWalletBalance =
-    platformBalances.find((p) => p.platformName === 'Main Wallet')?.balance || 0;
+    platformBalances.find((p) => p.platformName === "Main Wallet")?.balance ||
+    0;
 
   return {
     totalSales: stats[0].monthStats[0]?.totalSales || 0,
@@ -288,8 +518,24 @@ const getOverviewSummaryFromDB = async () => {
 
 const resetDailyTransactionsFromDB = async () => {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+  const endOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
   const result = await Transaction.deleteMany({
     createdAt: { $gte: startOfToday, $lte: endOfToday },
@@ -308,7 +554,7 @@ const resetMonthlyTransactionsFromDB = async () => {
 };
 
 const clearDebtFromDB = async () => {
-  const result = await Transaction.deleteMany({ actionName: 'Debt' });
+  const result = await Transaction.deleteMany({ actionName: "Debt" });
   return result;
 };
 
@@ -316,6 +562,8 @@ const clearDebtFromDB = async () => {
 
 export const TransactionServices = {
   createTransactionIntoDB,
+  updateTransactionInDB,
+  deleteTransactionFromDB,
   getAllTransactionsFromDB,
   getTransactionByIdFromDB,
   getOverviewSummaryFromDB,

@@ -16,13 +16,14 @@ const createTransaction = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllTransactions = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionServices.getAllTransactionsFromDB();
+  const result = await TransactionServices.getAllTransactionsFromDB(req.query);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
     message: 'Transactions are retrieved successfully',
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 
@@ -71,6 +72,30 @@ const resetMonthlyTransactions = catchAsync(async (req: Request, res: Response) 
   });
 });
 
+const updateTransaction = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await TransactionServices.updateTransactionInDB(id, req.body);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Transaction is updated successfully',
+    data: result,
+  });
+});
+
+const deleteTransaction = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await TransactionServices.deleteTransactionFromDB(id);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Transaction is deleted successfully',
+    data: result,
+  });
+});
+
 const clearDebt = catchAsync(async (req: Request, res: Response) => {
   const result = await TransactionServices.clearDebtFromDB();
 
@@ -84,6 +109,8 @@ const clearDebt = catchAsync(async (req: Request, res: Response) => {
 
 export const TransactionControllers = {
   createTransaction,
+  updateTransaction,
+  deleteTransaction,
   getAllTransactions,
   getTransactionById,
   getOverviewSummary,

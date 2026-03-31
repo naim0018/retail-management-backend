@@ -5,7 +5,7 @@ const platformBalanceSchema = new Schema<TPlatformBalance>(
   {
     platformName: {
       type: String,
-      enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet'],
+      enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload'],
       required: true,
       unique: true,
     },

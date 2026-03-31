@@ -8,14 +8,14 @@ const updateBalanceValidationSchema = z.object({
 
 const createPlatformValidationSchema = z.object({
   body: z.object({
-    platformName: z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet']),
+    platformName: z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload']),
     balance: z.number().min(0, 'Balance must be a positive number').optional(),
   }),
 });
 
 const resetBalanceValidationSchema = z.object({
   body: z.object({
-    platformName: z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet']),
+    platformName: z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload']),
     balance: z.number().min(0, 'Balance must be a positive number'),
   }),
 });

@@ -5,7 +5,7 @@ const mongoose_1 = require("mongoose");
 const platformBalanceSchema = new mongoose_1.Schema({
     platformName: {
         type: String,
-        enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet'],
+        enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload'],
         required: true,
         unique: true,
     },

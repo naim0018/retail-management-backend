@@ -16,6 +16,21 @@ const createTransactionValidationSchema = zod_1.z.object({
         customProfit: zod_1.z.number().optional(),
     }),
 });
+const updateTransactionValidationSchema = zod_1.z.object({
+    body: zod_1.z.object({
+        amount: zod_1.z.number().min(0).optional(),
+        category: zod_1.z.enum(['mobile_banking', 'other']).optional(),
+        type: zod_1.z.string().optional(),
+        platformName: zod_1.z.string().optional(),
+        actionName: zod_1.z.string().optional(),
+        operator: zod_1.z.string().optional(),
+        status: zod_1.z.enum(['pending', 'success', 'failed']).optional(),
+        referenceId: zod_1.z.string().optional(),
+        notes: zod_1.z.string().optional(),
+        customProfit: zod_1.z.number().optional(),
+    }),
+});
 exports.TransactionValidation = {
     createTransactionValidationSchema,
+    updateTransactionValidationSchema,
 };

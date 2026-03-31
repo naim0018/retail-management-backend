@@ -9,13 +9,13 @@ const updateBalanceValidationSchema = zod_1.z.object({
 });
 const createPlatformValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        platformName: zod_1.z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet']),
+        platformName: zod_1.z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload']),
         balance: zod_1.z.number().min(0, 'Balance must be a positive number').optional(),
     }),
 });
 const resetBalanceValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        platformName: zod_1.z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet']),
+        platformName: zod_1.z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload']),
         balance: zod_1.z.number().min(0, 'Balance must be a positive number'),
     }),
 });

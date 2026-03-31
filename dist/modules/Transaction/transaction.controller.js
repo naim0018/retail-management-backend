@@ -18,12 +18,13 @@ const createTransaction = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const getAllTransactions = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await transaction_service_1.TransactionServices.getAllTransactionsFromDB();
+    const result = await transaction_service_1.TransactionServices.getAllTransactionsFromDB(req.query);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
         message: 'Transactions are retrieved successfully',
-        data: result,
+        meta: result.meta,
+        data: result.data,
     });
 });
 const getTransactionById = (0, catchAsync_1.default)(async (req, res) => {
@@ -63,6 +64,26 @@ const resetMonthlyTransactions = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const updateTransaction = (0, catchAsync_1.default)(async (req, res) => {
+    const { id } = req.params;
+    const result = await transaction_service_1.TransactionServices.updateTransactionInDB(id, req.body);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Transaction is updated successfully',
+        data: result,
+    });
+});
+const deleteTransaction = (0, catchAsync_1.default)(async (req, res) => {
+    const { id } = req.params;
+    const result = await transaction_service_1.TransactionServices.deleteTransactionFromDB(id);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Transaction is deleted successfully',
+        data: result,
+    });
+});
 const clearDebt = (0, catchAsync_1.default)(async (req, res) => {
     const result = await transaction_service_1.TransactionServices.clearDebtFromDB();
     (0, sendResponse_1.default)(res, {
@@ -74,6 +95,8 @@ const clearDebt = (0, catchAsync_1.default)(async (req, res) => {
 });
 exports.TransactionControllers = {
     createTransaction,
+    updateTransaction,
+    deleteTransaction,
     getAllTransactions,
     getTransactionById,
     getOverviewSummary,

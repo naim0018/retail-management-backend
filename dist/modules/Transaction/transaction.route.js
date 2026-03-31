@@ -16,4 +16,6 @@ router.post('/reset-monthly', transaction_controller_1.TransactionControllers.re
 router.post('/clear-debt', transaction_controller_1.TransactionControllers.clearDebt);
 router.get('/', transaction_controller_1.TransactionControllers.getAllTransactions);
 router.get('/:id', transaction_controller_1.TransactionControllers.getTransactionById);
+router.patch('/:id', (0, validateRequest_1.default)(transaction_validation_1.TransactionValidation.updateTransactionValidationSchema), transaction_controller_1.TransactionControllers.updateTransaction);
+router.delete('/:id', transaction_controller_1.TransactionControllers.deleteTransaction);
 exports.TransactionRoutes = router;

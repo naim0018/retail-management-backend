@@ -11,7 +11,15 @@ const globalErrorHandler_1 = __importDefault(require("./app/middleware/globalErr
 const notFound_1 = __importDefault(require("./app/middleware/notFound"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
-app.use((0, cors_1.default)({ origin: ["http://localhost:5173"], credentials: true }));
+app.use((0, cors_1.default)({
+    origin: [
+        "http://localhost:5173",
+        "https://retailmanagementfrontend.vercel.app/",
+        "https://retailmanagementfrontend.vercel.app",
+        "https://retailmanagementfrontend-dm22rl2b3-naim0018s-projects.vercel.app",
+    ],
+    credentials: true,
+}));
 // app.use(cors())
 app.use("/api/v1", router_1.default);
 app.get("/", (req, res) => {

@@ -11,6 +11,8 @@ const userSchema = new mongoose_1.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, select: 0 },
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
+    profileImage: { type: String, default: '' },
+    dashboardName: { type: String, default: 'My Retailer' },
     isDeleted: { type: Boolean, default: false },
 }, {
     timestamps: true,

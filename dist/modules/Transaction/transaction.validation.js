@@ -4,30 +4,32 @@ exports.TransactionValidation = void 0;
 const zod_1 = require("zod");
 const createTransactionValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        amount: zod_1.z.number().min(0, 'Amount must be a positive number'),
+        amount: zod_1.z.number().positive(),
         category: zod_1.z.enum(['mobile_banking', 'other']),
-        type: zod_1.z.string().min(1, 'Type is required'),
-        platformName: zod_1.z.string().optional(),
+        type: zod_1.z.string(),
+        platformName: zod_1.z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload']).optional(),
         actionName: zod_1.z.string().optional(),
         operator: zod_1.z.string().optional(),
         status: zod_1.z.enum(['pending', 'success', 'failed']).optional(),
+        customProfit: zod_1.z.number().optional(),
+        date: zod_1.z.string().optional().transform((val) => val ? new Date(val) : new Date()),
         referenceId: zod_1.z.string().optional(),
         notes: zod_1.z.string().optional(),
-        customProfit: zod_1.z.number().optional(),
     }),
 });
 const updateTransactionValidationSchema = zod_1.z.object({
     body: zod_1.z.object({
-        amount: zod_1.z.number().min(0).optional(),
+        amount: zod_1.z.number().positive().optional(),
         category: zod_1.z.enum(['mobile_banking', 'other']).optional(),
         type: zod_1.z.string().optional(),
-        platformName: zod_1.z.string().optional(),
+        platformName: zod_1.z.enum(['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload']).optional(),
         actionName: zod_1.z.string().optional(),
         operator: zod_1.z.string().optional(),
         status: zod_1.z.enum(['pending', 'success', 'failed']).optional(),
+        customProfit: zod_1.z.number().optional(),
+        date: zod_1.z.string().optional().transform((val) => val ? new Date(val) : undefined),
         referenceId: zod_1.z.string().optional(),
         notes: zod_1.z.string().optional(),
-        customProfit: zod_1.z.number().optional(),
     }),
 });
 exports.TransactionValidation = {

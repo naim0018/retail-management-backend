@@ -3,6 +3,9 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../app/utils/catchAsync';
 import sendResponse from '../../app/utils/sendResponse';
 import { AuthService } from './auth.service';
+import config from '../../app/config';
+import AppError from '../../app/error/AppError';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
 const register = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.registerUser(req.body);
@@ -19,15 +22,17 @@ const login = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.loginUser(req.body);
   const { accessToken, refreshToken, user } = result;
 
-  res.cookie("accessToken", accessToken, {
+  const cookieOptions = {
     httpOnly: true,
-    secure: false, // Set to true in production
+    secure: config.NODE_ENV === "production",
+    sameSite: config.NODE_ENV === "production" ? "none" as const : "lax" as const,
     maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
-  });
+  };
+
+  res.cookie("accessToken", accessToken, cookieOptions);
 
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: false, // Set to true in production
+    ...cookieOptions,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   });
 
@@ -40,8 +45,14 @@ const login = catchAsync(async (req: Request, res: Response) => {
 });
 
 const logout = catchAsync(async (req: Request, res: Response) => {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
+  const cookieOptions = {
+    httpOnly: true,
+    secure: config.NODE_ENV === "production",
+    sameSite: config.NODE_ENV === "production" ? "none" as const : "lax" as const,
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -75,11 +86,39 @@ const updateMe = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const refreshToken = catchAsync(async (req: Request, res: Response) => {
+  const token = req.cookies?.refreshToken || req.body.refreshToken;
+  
+  if (!token) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "Refresh token is missing!");
+  }
+
+  const result = await AuthService.refreshToken(token);
+  const { accessToken } = result;
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: config.NODE_ENV === "production",
+    sameSite: config.NODE_ENV === "production" ? "none" as const : "lax" as const,
+    maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+  };
+
+  res.cookie("accessToken", accessToken, cookieOptions);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: "Access token refreshed successfully",
+    data: { accessToken },
+  });
+});
+
 export const AuthController = {
   register,
   login,
   logout,
   getMe,
   updateMe,
+  refreshToken,
 };
 

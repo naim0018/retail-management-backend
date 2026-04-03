@@ -8,11 +8,15 @@ import { User, TUserRole } from '../../modules/Auth/auth.model';
 
 const auth = (...requiredRoles: TUserRole[]) => {
   return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const token = req.cookies.accessToken || req.headers.authorization;
+    let token = req.cookies?.accessToken || req.headers.authorization;
+
+    if (token && token.startsWith('Bearer ')) {
+      token = token.split(' ')[1];
+    }
 
     // check if the token is missing
     if (!token) {
-      throw new AppError(StatusCodes.UNAUTHORIZED, 'You are not authorized!');
+      throw new AppError(StatusCodes.UNAUTHORIZED, 'Token is missing! Are you logged in?');
     }
 
     // check if the given token is valid
@@ -23,7 +27,7 @@ const auth = (...requiredRoles: TUserRole[]) => {
             config.jwt_access_secret as string,
           ) as JwtPayload;
     } catch (error) {
-        throw new AppError(StatusCodes.UNAUTHORIZED, 'Unauthorized token!');
+        throw new AppError(StatusCodes.UNAUTHORIZED, 'Token is invalid or expired!');
     }
 
     const { role, userId } = decoded;
@@ -42,7 +46,7 @@ const auth = (...requiredRoles: TUserRole[]) => {
     if (requiredRoles.length && !requiredRoles.includes(role)) {
       throw new AppError(
         StatusCodes.UNAUTHORIZED,
-        'You are not authorized!',
+        `Role mismatch! Required: ${requiredRoles.join(', ')}. Got: ${role}`,
       );
     }
 

@@ -8,8 +8,8 @@ const config_1 = __importDefault(require("../../app/config"));
 const AppError_1 = __importDefault(require("../../app/error/AppError"));
 const auth_model_1 = require("./auth.model");
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const http_status_codes_1 = require("http-status-codes");
+const auth_utils_1 = require("./auth.utils");
 const registerUser = async (payload) => {
     const isUserExist = await auth_model_1.User.findOne({ email: payload.email });
     if (isUserExist) {
@@ -30,20 +30,49 @@ const loginUser = async (payload) => {
     if (!isPasswordMatched) {
         throw new AppError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Invalid password!');
     }
-    const jwtPayload = { email: user.email, role: user.role };
-    const accessToken = jsonwebtoken_1.default.sign(jwtPayload, config_1.default.jwt_access_secret, {
-        expiresIn: '10d',
-    });
+    const jwtPayload = {
+        email: user.email,
+        role: user.role,
+        userId: user._id.toString(),
+        name: user.name
+    };
+    const accessToken = (0, auth_utils_1.createToken)(jwtPayload, config_1.default.jwt_access_secret, '10d');
+    const refreshToken = (0, auth_utils_1.createToken)(jwtPayload, config_1.default.jwt_access_secret, '30d');
     return {
         accessToken,
+        refreshToken,
         user: {
+            userId: user._id,
             name: user.name,
             email: user.email,
             role: user.role,
         },
     };
 };
+const getMe = async (userId) => {
+    const result = await auth_model_1.User.findById(userId);
+    return result;
+};
+const updateUser = async (userId, payload) => {
+    const user = await auth_model_1.User.findById(userId).select("+password");
+    if (!user) {
+        throw new AppError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, "User not found!");
+    }
+    if (payload.password) {
+        user.password = payload.password;
+    }
+    if (payload.name)
+        user.name = payload.name;
+    if (payload.profileImage)
+        user.profileImage = payload.profileImage;
+    if (payload.dashboardName)
+        user.dashboardName = payload.dashboardName;
+    await user.save();
+    return user;
+};
 exports.AuthService = {
     registerUser,
     loginUser,
+    getMe,
+    updateUser,
 };

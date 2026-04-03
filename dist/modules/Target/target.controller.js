@@ -23,7 +23,7 @@ const createTarget = (0, catchAsync_1.default)(async (req, res) => {
             end.setFullYear(end.getFullYear() + 1);
         payload.endDate = end;
     }
-    const result = await target_service_1.TargetServices.createTargetIntoDB(payload);
+    const result = await target_service_1.TargetServices.createTargetIntoDB(req.user.userId, payload);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         success: true,
@@ -32,7 +32,7 @@ const createTarget = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const getAllTargets = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await target_service_1.TargetServices.getAllTargetsFromDB();
+    const result = await target_service_1.TargetServices.getAllTargetsFromDB(req.user.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -42,7 +42,7 @@ const getAllTargets = (0, catchAsync_1.default)(async (req, res) => {
 });
 const updateTarget = (0, catchAsync_1.default)(async (req, res) => {
     const { id } = req.params;
-    const result = await target_service_1.TargetServices.updateTargetInDB(id, req.body);
+    const result = await target_service_1.TargetServices.updateTargetInDB(req.user.userId, id, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -51,7 +51,7 @@ const updateTarget = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const resetTargets = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await target_service_1.TargetServices.resetAllTargetsFromDB();
+    const result = await target_service_1.TargetServices.resetAllTargetsFromDB(req.user.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,

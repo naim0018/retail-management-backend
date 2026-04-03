@@ -9,7 +9,7 @@ const catchAsync_1 = __importDefault(require("../../app/utils/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../app/utils/sendResponse"));
 const transaction_service_1 = require("./transaction.service");
 const createTransaction = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await transaction_service_1.TransactionServices.createTransactionIntoDB(req.body);
+    const result = await transaction_service_1.TransactionServices.createTransactionIntoDB(req.user.userId, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         success: true,
@@ -18,7 +18,7 @@ const createTransaction = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const getAllTransactions = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await transaction_service_1.TransactionServices.getAllTransactionsFromDB(req.query);
+    const result = await transaction_service_1.TransactionServices.getAllTransactionsFromDB(req.user.userId, req.query);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -29,7 +29,7 @@ const getAllTransactions = (0, catchAsync_1.default)(async (req, res) => {
 });
 const getTransactionById = (0, catchAsync_1.default)(async (req, res) => {
     const { id } = req.params;
-    const result = await transaction_service_1.TransactionServices.getTransactionByIdFromDB(id);
+    const result = await transaction_service_1.TransactionServices.getTransactionByIdFromDB(req.user.userId, id);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -38,7 +38,7 @@ const getTransactionById = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const getOverviewSummary = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await transaction_service_1.TransactionServices.getOverviewSummaryFromDB();
+    const result = await transaction_service_1.TransactionServices.getOverviewSummaryFromDB(req.user.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -47,7 +47,7 @@ const getOverviewSummary = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const resetDailyTransactions = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await transaction_service_1.TransactionServices.resetDailyTransactionsFromDB();
+    const result = await transaction_service_1.TransactionServices.resetDailyTransactionsFromDB(req.user.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -56,7 +56,7 @@ const resetDailyTransactions = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const resetMonthlyTransactions = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await transaction_service_1.TransactionServices.resetMonthlyTransactionsFromDB();
+    const result = await transaction_service_1.TransactionServices.resetMonthlyTransactionsFromDB(req.user.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -66,7 +66,7 @@ const resetMonthlyTransactions = (0, catchAsync_1.default)(async (req, res) => {
 });
 const updateTransaction = (0, catchAsync_1.default)(async (req, res) => {
     const { id } = req.params;
-    const result = await transaction_service_1.TransactionServices.updateTransactionInDB(id, req.body);
+    const result = await transaction_service_1.TransactionServices.updateTransactionInDB(req.user.userId, id, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -76,7 +76,7 @@ const updateTransaction = (0, catchAsync_1.default)(async (req, res) => {
 });
 const deleteTransaction = (0, catchAsync_1.default)(async (req, res) => {
     const { id } = req.params;
-    const result = await transaction_service_1.TransactionServices.deleteTransactionFromDB(id);
+    const result = await transaction_service_1.TransactionServices.deleteTransactionFromDB(req.user.userId, id);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -85,7 +85,7 @@ const deleteTransaction = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const clearDebt = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await transaction_service_1.TransactionServices.clearDebtFromDB();
+    const result = await transaction_service_1.TransactionServices.clearDebtFromDB(req.user.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,

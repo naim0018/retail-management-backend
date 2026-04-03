@@ -20,6 +20,11 @@ router.post(
   AuthController.login
 );
 
+router.post(
+  '/refresh-token',
+  AuthController.refreshToken
+);
+
 router.get(
   '/me',
   auth(USER_ROLE.admin, USER_ROLE.user),

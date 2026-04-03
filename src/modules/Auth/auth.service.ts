@@ -4,6 +4,7 @@ import { User, IUser } from './auth.model';
 import bcrypt from 'bcrypt';
 import { StatusCodes } from 'http-status-codes';
 import { createToken } from './auth.utils';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
 const registerUser = async (payload: IUser) => {
   const isUserExist = await User.findOne({ email: payload.email });
@@ -78,9 +79,49 @@ const updateUser = async (userId: string, payload: Partial<IUser>) => {
   return user;
 };
 
+const refreshToken = async (token: string) => {
+  // verify the token
+  let decoded;
+  try {
+    decoded = jwt.verify(
+      token,
+      config.jwt_access_secret as string,
+    ) as JwtPayload;
+  } catch (error) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, "Refresh token is invalid or expired!");
+  }
+
+  const { userId } = decoded;
+
+  // check if the user exists
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new AppError(StatusCodes.NOT_FOUND, "This user is not found!");
+  }
+  // check if the user is already deleted
+  if (user.isDeleted) {
+    throw new AppError(StatusCodes.FORBIDDEN, "This user is deleted!");
+  }
+
+  const jwtPayload = {
+    email: user.email,
+    role: user.role,
+    userId: user._id.toString(),
+    name: user.name,
+  };
+
+  const accessToken = createToken(jwtPayload, config.jwt_access_secret as string, "10d");
+
+  return {
+    accessToken,
+  };
+};
+
 export const AuthService = {
   registerUser,
   loginUser,
   getMe,
   updateUser,
+  refreshToken,
 };

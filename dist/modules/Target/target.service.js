@@ -1,22 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TargetServices = void 0;
+const mongoose_1 = require("mongoose");
 const target_model_1 = require("./target.model");
-const createTargetIntoDB = async (payload) => {
-    // if startDate and endDate are not provided correctly in payload, we handle it in controller or pre-save hook, but assuming valid payload here.
+const createTargetIntoDB = async (userId, payload) => {
+    payload.userId = new mongoose_1.Types.ObjectId(userId);
     const result = await target_model_1.Target.create(payload);
     return result;
 };
-const getAllTargetsFromDB = async () => {
-    const result = await target_model_1.Target.find();
+const getAllTargetsFromDB = async (userId) => {
+    const result = await target_model_1.Target.find({ userId });
     return result;
 };
-const updateTargetInDB = async (id, payload) => {
-    const result = await target_model_1.Target.findByIdAndUpdate(id, payload, { new: true });
+const updateTargetInDB = async (userId, id, payload) => {
+    const result = await target_model_1.Target.findOneAndUpdate({ _id: id, userId }, payload, { new: true });
     return result;
 };
-const resetAllTargetsFromDB = async () => {
-    const result = await target_model_1.Target.deleteMany({});
+const resetAllTargetsFromDB = async (userId) => {
+    const result = await target_model_1.Target.deleteMany({ userId });
     return result;
 };
 exports.TargetServices = {

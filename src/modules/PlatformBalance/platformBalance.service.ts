@@ -1,35 +1,38 @@
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { TPlatformBalance } from './platformBalance.interface';
 import { PlatformBalance } from './platformBalance.model';
 import { Transaction } from '../Transaction/transaction.model';
 
-const initializePlatformBalanceIntoDB = async (payload: TPlatformBalance) => {
+const initializePlatformBalanceIntoDB = async (userId: string | Types.ObjectId, payload: TPlatformBalance) => {
+  payload.userId = new Types.ObjectId(userId);
   const result = await PlatformBalance.create(payload);
   return result;
 };
 
-const getAllPlatformBalancesFromDB = async () => {
-  const result = await PlatformBalance.find();
+const getAllPlatformBalancesFromDB = async (userId: string | Types.ObjectId) => {
+  const result = await PlatformBalance.find({ userId });
   return result;
 };
 
-const updatePlatformBalanceInDB = async (id: string, balance: number) => {
-  const result = await PlatformBalance.findByIdAndUpdate(
-    id,
+const updatePlatformBalanceInDB = async (userId: string | Types.ObjectId, id: string, balance: number) => {
+  const result = await PlatformBalance.findOneAndUpdate(
+    { _id: id, userId },
     { balance, lastUpdated: new Date() },
     { new: true }
   );
   return result;
 };
 
-const resetPlatformBalanceByName = async (platformName: string, balance: number) => {
+const resetPlatformBalanceByName = async (userId: string | Types.ObjectId, platformName: string, balance: number) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
 
+    const uId = new Types.ObjectId(userId);
+
     // 1. Update/Reset Platform Balance
     const updatedBalance = await PlatformBalance.findOneAndUpdate(
-      { platformName },
+      { userId: uId, platformName },
       { balance, lastUpdated: new Date() },
       { new: true, upsert: true, session }
     );
@@ -37,6 +40,7 @@ const resetPlatformBalanceByName = async (platformName: string, balance: number)
     // 2. Create a "Balance Reset" transaction record for history
     await Transaction.create([
       {
+        userId: uId,
         amount: balance,
         category: 'other',
         type: 'Balance Reset',
@@ -58,8 +62,8 @@ const resetPlatformBalanceByName = async (platformName: string, balance: number)
   }
 };
 
-const resetAllBalancesFromDB = async () => {
-  const result = await PlatformBalance.updateMany({}, { balance: 0, lastUpdated: new Date() });
+const resetAllBalancesFromDB = async (userId: string | Types.ObjectId) => {
+  const result = await PlatformBalance.updateMany({ userId }, { balance: 0, lastUpdated: new Date() });
   return result;
 };
 

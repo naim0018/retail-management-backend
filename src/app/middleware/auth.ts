@@ -1,65 +1,54 @@
+import { NextFunction, Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import config from '../config';
+import AppError from '../error/AppError';
+import catchAsync from '../utils/catchAsync';
+import { User, TUserRole } from '../../modules/Auth/auth.model';
 
+const auth = (...requiredRoles: TUserRole[]) => {
+  return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.headers.authorization;
 
-// const auth = (...requiredRoles: TUserRole[]) => {
-//   return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-//     const token = req.headers.authorization;
+    // check if the token is missing
+    if (!token) {
+      throw new AppError(StatusCodes.UNAUTHORIZED, 'You are not authorized!');
+    }
 
-//     // checking if the token is missing
-//     if (!token) {
-//       throw new AppError(httpStatus.UNAUTHORIZED, 'You are not authorized!');
-//     }
+    // check if the given token is valid
+    let decoded;
+    try {
+        decoded = jwt.verify(
+            token,
+            config.jwt_access_secret as string,
+          ) as JwtPayload;
+    } catch (error) {
+        throw new AppError(StatusCodes.UNAUTHORIZED, 'Unauthorized token!');
+    }
 
-//     // checking if the given token is valid
-//     const decoded = jwt.verify(
-//       token,
-//       config.jwt_access_secret as string,
-//     ) as JwtPayload;
+    const { role, userId } = decoded;
 
-//     const { role, userId, iat } = decoded;
+    // check if the user exists
+    const user = await User.findById(userId);
 
-//     // checking if the user is exist
-//     const user = await User.isUserExistsByCustomId(userId);
+    if (!user) {
+      throw new AppError(StatusCodes.NOT_FOUND, 'This user is not found!');
+    }
+    // check if the user is already deleted
+    if (user.isDeleted) {
+      throw new AppError(StatusCodes.FORBIDDEN, 'This user is deleted!');
+    }
 
-//     if (!user) {
-//       throw new AppError(httpStatus.NOT_FOUND, 'This user is not found !');
-//     }
-//     // checking if the user is already deleted
+    if (requiredRoles.length && !requiredRoles.includes(role)) {
+      throw new AppError(
+        StatusCodes.UNAUTHORIZED,
+        'You are not authorized!',
+      );
+    }
 
-//     const isDeleted = user?.isDeleted;
+    req.user = decoded as JwtPayload;
+    next();
+  });
+};
 
-//     if (isDeleted) {
-//       throw new AppError(httpStatus.FORBIDDEN, 'This user is deleted !');
-//     }
-
-//     // checking if the user is blocked
-//     const userStatus = user?.status;
-    
-
-//     if (userStatus === 'blocked') {
-//       throw new AppError(httpStatus.FORBIDDEN, 'This user is blocked ! !');
-//     }
-
-//     if (
-//       user.passwordChangedAt &&
-//       User.isJWTIssuedBeforePasswordChanged(
-//         user.passwordChangedAt,
-//         iat as number,
-//       )
-//     ) {
-//       throw new AppError(httpStatus.UNAUTHORIZED, 'You are not authorized !');
-//     }
-
-//     if (requiredRoles && !requiredRoles.includes(role)) {
-//       throw new AppError(
-//         httpStatus.UNAUTHORIZED,
-//         'You are not authorized  hi!',
-//       );
-//     }
-
-//     req.user = decoded as JwtPayload & { role: string };
-  
-//     next();
-//   });
-// };
-
-// export default auth;
+export default auth;

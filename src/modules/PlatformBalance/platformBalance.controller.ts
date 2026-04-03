@@ -5,7 +5,7 @@ import sendResponse from '../../app/utils/sendResponse';
 import { PlatformBalanceServices } from './platformBalance.service';
 
 const initializePlatformBalance = catchAsync(async (req: Request, res: Response) => {
-  const result = await PlatformBalanceServices.initializePlatformBalanceIntoDB(req.body);
+  const result = await PlatformBalanceServices.initializePlatformBalanceIntoDB(req.user.userId, req.body);
 
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
@@ -16,7 +16,7 @@ const initializePlatformBalance = catchAsync(async (req: Request, res: Response)
 });
 
 const getAllPlatformBalances = catchAsync(async (req: Request, res: Response) => {
-  const result = await PlatformBalanceServices.getAllPlatformBalancesFromDB();
+  const result = await PlatformBalanceServices.getAllPlatformBalancesFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -29,7 +29,7 @@ const getAllPlatformBalances = catchAsync(async (req: Request, res: Response) =>
 const updatePlatformBalance = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { balance } = req.body;
-  const result = await PlatformBalanceServices.updatePlatformBalanceInDB(id, balance);
+  const result = await PlatformBalanceServices.updatePlatformBalanceInDB(req.user.userId, id, balance);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -41,7 +41,7 @@ const updatePlatformBalance = catchAsync(async (req: Request, res: Response) => 
 
 const resetPlatformBalance = catchAsync(async (req: Request, res: Response) => {
   const { platformName, balance } = req.body;
-  const result = await PlatformBalanceServices.resetPlatformBalanceByName(platformName, balance);
+  const result = await PlatformBalanceServices.resetPlatformBalanceByName(req.user.userId, platformName, balance);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -52,7 +52,7 @@ const resetPlatformBalance = catchAsync(async (req: Request, res: Response) => {
 });
 
 const resetAllPlatformBalances = catchAsync(async (req: Request, res: Response) => {
-  const result = await PlatformBalanceServices.resetAllBalancesFromDB();
+  const result = await PlatformBalanceServices.resetAllBalancesFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,

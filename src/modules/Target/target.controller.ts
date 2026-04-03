@@ -16,7 +16,7 @@ const createTarget = catchAsync(async (req: Request, res: Response) => {
     payload.endDate = end;
   }
 
-  const result = await TargetServices.createTargetIntoDB(payload);
+  const result = await TargetServices.createTargetIntoDB(req.user.userId, payload);
 
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
@@ -27,7 +27,7 @@ const createTarget = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllTargets = catchAsync(async (req: Request, res: Response) => {
-  const result = await TargetServices.getAllTargetsFromDB();
+  const result = await TargetServices.getAllTargetsFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -39,7 +39,7 @@ const getAllTargets = catchAsync(async (req: Request, res: Response) => {
 
 const updateTarget = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await TargetServices.updateTargetInDB(id, req.body);
+  const result = await TargetServices.updateTargetInDB(req.user.userId, id, req.body);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -50,7 +50,7 @@ const updateTarget = catchAsync(async (req: Request, res: Response) => {
 });
 
 const resetTargets = catchAsync(async (req: Request, res: Response) => {
-  const result = await TargetServices.resetAllTargetsFromDB();
+  const result = await TargetServices.resetAllTargetsFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,

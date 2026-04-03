@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { TTransaction } from "./transaction.interface";
 import { Transaction } from "./transaction.model";
 import { PlatformBalance } from "../PlatformBalance/platformBalance.model";
@@ -43,6 +43,7 @@ const SALES_ACTION_NAMES = [
 // ─── Balance Adjustment Helper ───────────────────────────────────────────────
 
 const adjustPlatformBalance = async (
+  userId: string | Types.ObjectId,
   transaction: TTransaction,
   session: mongoose.ClientSession,
   isReverse: boolean = false,
@@ -60,13 +61,13 @@ const adjustPlatformBalance = async (
       // Create: Main Wallet +amount, Platform -amount +profit
       // Reverse: Main Wallet -amount, Platform +amount -profit
       await PlatformBalance.findOneAndUpdate(
-        { platformName: "Main Wallet" },
+        { userId, platformName: "Main Wallet" },
         { $inc: { balance: amount }, lastUpdated: new Date() },
         { session, upsert: true },
       );
       if (platformName) {
         await PlatformBalance.findOneAndUpdate(
-          { platformName },
+          { userId, platformName },
           { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
           { session, upsert: true },
         );
@@ -74,39 +75,39 @@ const adjustPlatformBalance = async (
     } else if (type === "Cash Out") {
       // Create: Main Wallet -amount, Platform +amount +profit
       await PlatformBalance.findOneAndUpdate(
-        { platformName: "Main Wallet" },
+        { userId, platformName: "Main Wallet" },
         { $inc: { balance: -amount }, lastUpdated: new Date() },
         { session, upsert: true },
       );
       if (platformName) {
         await PlatformBalance.findOneAndUpdate(
-          { platformName },
+          { userId, platformName },
           { $inc: { balance: amount + profit }, lastUpdated: new Date() },
           { session, upsert: true },
         );
       }
     } else if (type === "B2B In") {
       await PlatformBalance.findOneAndUpdate(
-        { platformName: "Main Wallet" },
+        { userId, platformName: "Main Wallet" },
         { $inc: { balance: -amount }, lastUpdated: new Date() },
         { session, upsert: true },
       );
       if (platformName) {
         await PlatformBalance.findOneAndUpdate(
-          { platformName },
+          { userId, platformName },
           { $inc: { balance: amount + profit }, lastUpdated: new Date() },
           { session, upsert: true },
         );
       }
     } else if (type === "B2B Out") {
       await PlatformBalance.findOneAndUpdate(
-        { platformName: "Main Wallet" },
+        { userId, platformName: "Main Wallet" },
         { $inc: { balance: amount }, lastUpdated: new Date() },
         { session, upsert: true },
       );
       if (platformName) {
         await PlatformBalance.findOneAndUpdate(
-          { platformName },
+          { userId, platformName },
           { $inc: { balance: -amount + profit }, lastUpdated: new Date() },
           { session, upsert: true },
         );
@@ -118,31 +119,31 @@ const adjustPlatformBalance = async (
       if (type === "Add Balance") {
         // Cash leaves Main Wallet, Digital balance enters Flexiload
         await PlatformBalance.findOneAndUpdate(
-          { platformName: "Main Wallet" },
+          { userId, platformName: "Main Wallet" },
           { $inc: { balance: -amount }, lastUpdated: new Date() },
           { session, upsert: true },
         );
         await PlatformBalance.findOneAndUpdate(
-          { platformName: "Flexiload" },
+          { userId, platformName: "Flexiload" },
           { $inc: { balance: amount }, lastUpdated: new Date() },
           { session, upsert: true },
         );
       } else {
         // Normal Flexiload (send): Cash enters Main Wallet, Digital balance leaves Flexiload
         await PlatformBalance.findOneAndUpdate(
-          { platformName: "Main Wallet" },
+          { userId, platformName: "Main Wallet" },
           { $inc: { balance: amount }, lastUpdated: new Date() },
           { session, upsert: true },
         );
         await PlatformBalance.findOneAndUpdate(
-          { platformName: "Flexiload" },
+          { userId, platformName: "Flexiload" },
           { $inc: { balance: -amount }, lastUpdated: new Date() },
           { session, upsert: true },
         );
       }
     } else if ((ADD_TO_WALLET_ACTIONS as readonly string[]).includes(actionName)) {
       await PlatformBalance.findOneAndUpdate(
-        { platformName: "Main Wallet" },
+        { userId, platformName: "Main Wallet" },
         { $inc: { balance: amount }, lastUpdated: new Date() },
         { session, upsert: true },
       );
@@ -150,7 +151,7 @@ const adjustPlatformBalance = async (
       (CUT_FROM_WALLET_ACTIONS as readonly string[]).includes(actionName)
     ) {
       await PlatformBalance.findOneAndUpdate(
-        { platformName: "Main Wallet" },
+        { userId, platformName: "Main Wallet" },
         { $inc: { balance: -amount }, lastUpdated: new Date() },
         { session, upsert: true },
       );
@@ -160,10 +161,12 @@ const adjustPlatformBalance = async (
 
 // ─── Create Transaction ───────────────────────────────────────────────────────
 
-const createTransactionIntoDB = async (payload: TTransaction) => {
+const createTransactionIntoDB = async (userId: string | Types.ObjectId, payload: TTransaction) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
+
+    payload.userId = new Types.ObjectId(userId);
 
     let profit = 0;
     const actionName = payload.actionName || "";
@@ -198,7 +201,7 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
     payload.profit = profit;
 
     // ── Platform Balance Updates ────────────────────────────────────────────
-    await adjustPlatformBalance(payload, session);
+    await adjustPlatformBalance(userId, payload, session);
 
     const result = await Transaction.create([payload], { session });
 
@@ -213,6 +216,7 @@ const createTransactionIntoDB = async (payload: TTransaction) => {
 };
 
 const updateTransactionInDB = async (
+  userId: string | Types.ObjectId,
   id: string,
   payload: Partial<TTransaction>,
 ) => {
@@ -220,16 +224,16 @@ const updateTransactionInDB = async (
   try {
     session.startTransaction();
 
-    const oldTransaction = await Transaction.findById(id).session(session);
+    const oldTransaction = await Transaction.findOne({ _id: id, userId }).session(session);
     if (!oldTransaction) {
       throw new Error("Transaction not found");
     }
 
     // 1. Reverse old balance impact
-    await adjustPlatformBalance(oldTransaction.toObject(), session, true);
+    await adjustPlatformBalance(userId, oldTransaction.toObject(), session, true);
 
     // 2. Merge payload with old transaction to calculate new profit
-    const updatedData = { ...oldTransaction.toObject(), ...payload };
+    const updatedData = { ...oldTransaction.toObject(), ...payload, userId: new Types.ObjectId(userId) };
 
     let profit = 0;
     const actionName = updatedData.actionName || "";
@@ -275,10 +279,10 @@ const updateTransactionInDB = async (
     }
 
     // 3. Apply new balance impact
-    await adjustPlatformBalance(updatedData, session);
+    await adjustPlatformBalance(userId, updatedData, session);
 
     // 4. Update in DB
-    const result = await Transaction.findByIdAndUpdate(id, updatedData, {
+    const result = await Transaction.findOneAndUpdate({ _id: id, userId }, updatedData, {
       new: true,
       session,
     });
@@ -293,20 +297,20 @@ const updateTransactionInDB = async (
   }
 };
 
-const deleteTransactionFromDB = async (id: string) => {
+const deleteTransactionFromDB = async (userId: string | Types.ObjectId, id: string) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
 
-    const transaction = await Transaction.findById(id).session(session);
+    const transaction = await Transaction.findOne({ _id: id, userId }).session(session);
     if (!transaction) {
       throw new Error("Transaction not found");
     }
 
     // Reverse balance impact
-    await adjustPlatformBalance(transaction.toObject(), session, true);
+    await adjustPlatformBalance(userId, transaction.toObject(), session, true);
 
-    const result = await Transaction.findByIdAndDelete(id, { session });
+    const result = await Transaction.findOneAndDelete({ _id: id, userId }, { session });
 
     await session.commitTransaction();
     await session.endSession();
@@ -320,7 +324,7 @@ const deleteTransactionFromDB = async (id: string) => {
 
 // ─── Read Operations ──────────────────────────────────────────────────────────
 
-const getAllTransactionsFromDB = async (query: Record<string, any>) => {
+const getAllTransactionsFromDB = async (userId: string | Types.ObjectId, query: Record<string, any>) => {
   const {
     page = 1,
     limit = 50,
@@ -335,7 +339,7 @@ const getAllTransactionsFromDB = async (query: Record<string, any>) => {
     endDate,
   } = query;
 
-  const mongoQuery: Record<string, any> = {};
+  const mongoQuery: Record<string, any> = { userId };
 
   // Filtering
   if (category) mongoQuery.category = category;
@@ -352,11 +356,16 @@ const getAllTransactionsFromDB = async (query: Record<string, any>) => {
 
   // Search by actionName or operator
   if (searchTerm) {
-    mongoQuery.$or = [
-      { actionName: { $regex: searchTerm, $options: 'i' } },
-      { operator: { $regex: searchTerm, $options: 'i' } },
-      { referenceId: { $regex: searchTerm, $options: 'i' } },
-    ];
+    mongoQuery.$and = [
+        { userId },
+        {
+            $or: [
+                { actionName: { $regex: searchTerm, $options: 'i' } },
+                { operator: { $regex: searchTerm, $options: 'i' } },
+                { referenceId: { $regex: searchTerm, $options: 'i' } },
+              ],
+        }
+    ]
   }
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -380,15 +389,16 @@ const getAllTransactionsFromDB = async (query: Record<string, any>) => {
   };
 };
 
-const getTransactionByIdFromDB = async (id: string) => {
-  const result = await Transaction.findById(id);
+const getTransactionByIdFromDB = async (userId: string | Types.ObjectId, id: string) => {
+  const result = await Transaction.findOne({ _id: id, userId });
   return result;
 };
 
 // ─── Overview Summary ─────────────────────────────────────────────────────────
 
-const getOverviewSummaryFromDB = async () => {
+const getOverviewSummaryFromDB = async (userId: string | Types.ObjectId) => {
   const now = new Date();
+  const uId = new Types.ObjectId(userId);
 
   // Today boundaries
   const startOfToday = new Date(
@@ -418,7 +428,7 @@ const getOverviewSummaryFromDB = async () => {
       $facet: {
         // Month-scoped master stats
         monthStats: [
-          { $match: { createdAt: { $gte: startOfMonth } } },
+          { $match: { userId: uId, createdAt: { $gte: startOfMonth } } },
           {
             $group: {
               _id: null,
@@ -460,7 +470,7 @@ const getOverviewSummaryFromDB = async () => {
 
         // Today-scoped stats
         todayStats: [
-          { $match: { createdAt: { $gte: startOfToday, $lte: endOfToday } } },
+          { $match: { userId: uId, createdAt: { $gte: startOfToday, $lte: endOfToday } } },
           {
             $group: {
               _id: null,
@@ -496,7 +506,7 @@ const getOverviewSummaryFromDB = async () => {
     },
   ]);
 
-  const platformBalances = await PlatformBalance.find();
+  const platformBalances = await PlatformBalance.find({ userId: uId });
   const totalBalance = platformBalances.reduce(
     (acc, curr) => acc + curr.balance,
     0,
@@ -516,7 +526,7 @@ const getOverviewSummaryFromDB = async () => {
   };
 };
 
-const resetDailyTransactionsFromDB = async () => {
+const resetDailyTransactionsFromDB = async (userId: string | Types.ObjectId) => {
   const now = new Date();
   const startOfToday = new Date(
     now.getFullYear(),
@@ -538,23 +548,25 @@ const resetDailyTransactionsFromDB = async () => {
   );
 
   const result = await Transaction.deleteMany({
+    userId,
     createdAt: { $gte: startOfToday, $lte: endOfToday },
   });
   return result;
 };
 
-const resetMonthlyTransactionsFromDB = async () => {
+const resetMonthlyTransactionsFromDB = async (userId: string | Types.ObjectId) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const result = await Transaction.deleteMany({
+    userId,
     createdAt: { $gte: startOfMonth },
   });
   return result;
 };
 
-const clearDebtFromDB = async () => {
-  const result = await Transaction.deleteMany({ actionName: "Debt" });
+const clearDebtFromDB = async (userId: string | Types.ObjectId) => {
+  const result = await Transaction.deleteMany({ userId, actionName: "Debt" });
   return result;
 };
 

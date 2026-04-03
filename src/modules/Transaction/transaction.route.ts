@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { TransactionControllers } from './transaction.controller';
 import validateRequest from '../../app/middleware/validateRequest';
 import { TransactionValidation } from './transaction.validation';
+import auth from '../../app/middleware/auth';
 
 const router = Router();
+
+router.use(auth());
 
 router.post(
   '/',

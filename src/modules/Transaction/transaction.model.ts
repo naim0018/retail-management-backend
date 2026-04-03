@@ -3,6 +3,11 @@ import { TTransaction } from './transaction.interface';
 
 const transactionSchema = new Schema<TTransaction>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     amount: {
       type: Number,
       required: true,

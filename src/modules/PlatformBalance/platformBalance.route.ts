@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { PlatformBalanceControllers } from './platformBalance.controller';
 import validateRequest from '../../app/middleware/validateRequest';
 import { PlatformBalanceValidation } from './platformBalance.validation';
+import auth from '../../app/middleware/auth';
 
 const router = Router();
+
+router.use(auth());
 
 router.post(
   '/',

@@ -2,12 +2,15 @@ import mongoose from 'mongoose'
 import app from './app'
 import config from './app/config'
 import {Server} from 'http'
+import { seedAdmin } from './modules/Auth/auth.seed';
+
 let server:Server
 async function main (){
 
 try {
     
    await mongoose.connect(config.db as string)
+   await seedAdmin();
     server = app.listen(config.port,()=>{
         console.log(`App running on port -${config.port}`)
      })
@@ -34,4 +37,3 @@ process.on('uncaughtRejection',()=>{
     process.exit(1)
     
 })
-

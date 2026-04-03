@@ -4,17 +4,19 @@ const createTargetValidationSchema = z.object({
   body: z.object({
     type: z.enum(['Sales', 'Debt', 'Profit', 'Transactions']),
     period: z.enum(['daily', 'monthly', 'yearly']),
-    targetAmount: z.number().min(0, 'Target amount must be a positive number'),
-    currentAmount: z.number().min(0).optional(),
-    startDate: z.string().datetime().optional(),
-    endDate: z.string().datetime().optional(),
+    targetAmount: z.number().positive(),
+    currentAmount: z.number().nonnegative().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
   }),
 });
 
 const updateTargetValidationSchema = z.object({
   body: z.object({
-    currentAmount: z.number().min(0).optional(),
-    targetAmount: z.number().min(0).optional(),
+    targetAmount: z.number().positive().optional(),
+    currentAmount: z.number().nonnegative().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
   }),
 });
 

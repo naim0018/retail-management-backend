@@ -3,11 +3,15 @@ import { TPlatformBalance } from './platformBalance.interface';
 
 const platformBalanceSchema = new Schema<TPlatformBalance>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     platformName: {
       type: String,
       enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload'],
       required: true,
-      unique: true,
     },
     balance: {
       type: Number,
@@ -23,5 +27,7 @@ const platformBalanceSchema = new Schema<TPlatformBalance>(
     timestamps: true,
   }
 );
+
+platformBalanceSchema.index({ userId: 1, platformName: 1 }, { unique: true });
 
 export const PlatformBalance = model<TPlatformBalance>('PlatformBalance', platformBalanceSchema);

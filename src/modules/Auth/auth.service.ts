@@ -2,8 +2,8 @@ import config from '../../app/config';
 import AppError from '../../app/error/AppError';
 import { User, IUser } from './auth.model';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
+import { createToken } from './auth.utils';
 
 const registerUser = async (payload: IUser) => {
   const isUserExist = await User.findOne({ email: payload.email });
@@ -34,15 +34,19 @@ const loginUser = async (payload: Partial<IUser>) => {
     throw new AppError(StatusCodes.FORBIDDEN, 'Invalid password!');
   }
 
-  const jwtPayload = { email: user.email, role: user.role };
+  const jwtPayload = { 
+    email: user.email, 
+    role: user.role, 
+    userId: user._id.toString(), 
+    name: user.name 
+  };
 
-  const accessToken = jwt.sign(jwtPayload, config.jwt_access_secret as string, {
-    expiresIn: '10d',
-  });
+  const accessToken = createToken(jwtPayload, config.jwt_access_secret as string, '10d');
 
   return {
     accessToken,
     user: {
+      userId: user._id,
       name: user.name,
       email: user.email,
       role: user.role,

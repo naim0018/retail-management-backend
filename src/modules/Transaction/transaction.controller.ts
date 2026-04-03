@@ -5,7 +5,7 @@ import sendResponse from '../../app/utils/sendResponse';
 import { TransactionServices } from './transaction.service';
 
 const createTransaction = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionServices.createTransactionIntoDB(req.body);
+  const result = await TransactionServices.createTransactionIntoDB(req.user.userId, req.body);
 
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
@@ -16,7 +16,7 @@ const createTransaction = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllTransactions = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionServices.getAllTransactionsFromDB(req.query);
+  const result = await TransactionServices.getAllTransactionsFromDB(req.user.userId, req.query);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -29,7 +29,7 @@ const getAllTransactions = catchAsync(async (req: Request, res: Response) => {
 
 const getTransactionById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await TransactionServices.getTransactionByIdFromDB(id);
+  const result = await TransactionServices.getTransactionByIdFromDB(req.user.userId, id);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -40,7 +40,7 @@ const getTransactionById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getOverviewSummary = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionServices.getOverviewSummaryFromDB();
+  const result = await TransactionServices.getOverviewSummaryFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -51,7 +51,7 @@ const getOverviewSummary = catchAsync(async (req: Request, res: Response) => {
 });
 
 const resetDailyTransactions = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionServices.resetDailyTransactionsFromDB();
+  const result = await TransactionServices.resetDailyTransactionsFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -62,7 +62,7 @@ const resetDailyTransactions = catchAsync(async (req: Request, res: Response) =>
 });
 
 const resetMonthlyTransactions = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionServices.resetMonthlyTransactionsFromDB();
+  const result = await TransactionServices.resetMonthlyTransactionsFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -74,7 +74,7 @@ const resetMonthlyTransactions = catchAsync(async (req: Request, res: Response) 
 
 const updateTransaction = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await TransactionServices.updateTransactionInDB(id, req.body);
+  const result = await TransactionServices.updateTransactionInDB(req.user.userId, id, req.body);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -86,7 +86,7 @@ const updateTransaction = catchAsync(async (req: Request, res: Response) => {
 
 const deleteTransaction = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await TransactionServices.deleteTransactionFromDB(id);
+  const result = await TransactionServices.deleteTransactionFromDB(req.user.userId, id);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -97,7 +97,7 @@ const deleteTransaction = catchAsync(async (req: Request, res: Response) => {
 });
 
 const clearDebt = catchAsync(async (req: Request, res: Response) => {
-  const result = await TransactionServices.clearDebtFromDB();
+  const result = await TransactionServices.clearDebtFromDB(req.user.userId);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,

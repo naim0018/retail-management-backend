@@ -3,6 +3,11 @@ import { TTarget } from './target.interface';
 
 const targetSchema = new Schema<TTarget>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     type: {
       type: String,
       enum: ['Sales', 'Debt', 'Profit', 'Transactions'],

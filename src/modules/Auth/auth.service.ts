@@ -42,9 +42,11 @@ const loginUser = async (payload: Partial<IUser>) => {
   };
 
   const accessToken = createToken(jwtPayload, config.jwt_access_secret as string, '10d');
+  const refreshToken = createToken(jwtPayload, config.jwt_access_secret as string, '30d');
 
   return {
     accessToken,
+    refreshToken,
     user: {
       userId: user._id,
       name: user.name,
@@ -54,7 +56,31 @@ const loginUser = async (payload: Partial<IUser>) => {
   };
 };
 
+const getMe = async (userId: string) => {
+  const result = await User.findById(userId);
+  return result;
+};
+
+const updateUser = async (userId: string, payload: Partial<IUser>) => {
+  const user = await User.findById(userId).select("+password");
+  if (!user) {
+    throw new AppError(StatusCodes.NOT_FOUND, "User not found!");
+  }
+
+  if (payload.password) {
+    user.password = payload.password;
+  }
+  if (payload.name) user.name = payload.name;
+  if (payload.profileImage) user.profileImage = payload.profileImage;
+  if (payload.dashboardName) user.dashboardName = payload.dashboardName;
+
+  await user.save();
+  return user;
+};
+
 export const AuthService = {
   registerUser,
   loginUser,
+  getMe,
+  updateUser,
 };

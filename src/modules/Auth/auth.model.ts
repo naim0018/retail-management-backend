@@ -9,6 +9,8 @@ export interface IUser {
   email: string;
   password?: string;
   role: TUserRole;
+  profileImage?: string;
+  dashboardName?: string;
   isDeleted: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -20,6 +22,8 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     password: { type: String, select: 0 },
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
+    profileImage: { type: String, default: '' },
+    dashboardName: { type: String, default: 'My Retailer' },
     isDeleted: { type: Boolean, default: false },
   },
   {

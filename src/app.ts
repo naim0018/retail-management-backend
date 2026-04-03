@@ -5,9 +5,12 @@ import { StatusCodes } from "http-status-codes";
 import router from "./app/router/router";
 import globalErrorHandler from "./app/middleware/globalErrorHandler";
 import notFound from "./app/middleware/notFound";
+import cookieParser from "cookie-parser";
+
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     origin: [

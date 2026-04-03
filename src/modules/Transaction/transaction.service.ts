@@ -86,7 +86,7 @@ const adjustPlatformBalance = async (
           { session, upsert: true },
         );
       }
-    } else if (type === "B2B In") {
+    } else if (type === "B2B In" || type === "Add Balance") {
       await PlatformBalance.findOneAndUpdate(
         { userId, platformName: "Main Wallet" },
         { $inc: { balance: -amount }, lastUpdated: new Date() },
@@ -177,7 +177,7 @@ const createTransactionIntoDB = async (userId: string | Types.ObjectId, payload:
     if (payload.category === "mobile_banking") {
       if (type === "Cash In" || type === "Cash Out") {
         profit =
-          actionName === "bKash"
+          (actionName === "bKash" || actionName === "bKash (P)" || actionName === "bKash (M)")
             ? amount * BKASH_COMMISSION_RATE
             : amount * COMMISSION_RATE;
       }
@@ -246,7 +246,7 @@ const updateTransactionInDB = async (
     if (updatedData.category === "mobile_banking") {
       if (type === "Cash In" || type === "Cash Out") {
         profit =
-          actionName === "bKash"
+          (actionName === "bKash" || actionName === "bKash (P)" || actionName === "bKash (M)")
             ? amount * BKASH_COMMISSION_RATE
             : amount * COMMISSION_RATE;
       }

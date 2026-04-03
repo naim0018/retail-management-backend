@@ -24,7 +24,7 @@ const transactionSchema = new Schema<TTransaction>(
     },
     platformName: {
       type: String,
-      enum: ['bKash', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload'],
+      enum: ['bKash', 'bKash (P)', 'bKash (M)', 'Nagad', 'Rocket', 'Upay', 'Tap', 'mCash', 'Main Wallet', 'Flexiload'],
     },
     actionName: {
       type: String,
